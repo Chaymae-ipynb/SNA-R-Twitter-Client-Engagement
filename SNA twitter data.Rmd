@@ -1,0 +1,189 @@
+---
+title: "SNA for twitter data - Customer Engagement through Social Media Case"
+author: "Chaymae"
+project category: Social Network Analysis
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+content: SNA code, metrics and plots, analysis and recommendations
+---
+
+Xoxoday.com is a company specializing in experiential gifting, and faces challenges in utilizing social media for customer engagement and acquisition. Despite its active presence on platforms such as Twitter, Facebook, LinkedIn, YouTube, and WhatsApp, and posting an average of three tweets per day, Xoxoday was not achieving the expected consumer engagement through these channels. This situation prompted the company to consider social network analysis (SNA) as a method to better understand the dynamics of customer interactions and the effectiveness of their social media strategies.
+
+
+Note: For your reference, Interactive plots as well as the analysis/recommendations part are found at the end of the notebook. Thank you!
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(readxl)
+library(igraph)
+```
+
+
+```{r}
+tweets_data <- read_excel("C:/Users/chouc/Downloads/W19310-XLS-ENG.xlsx", sheet = "Tweets Data")
+retweets_data <- read_excel("C:/Users/chouc/Downloads/W19310-XLS-ENG.xlsx", sheet = "Retweets Data")
+user_data <- read_excel("C:/Users/chouc/Downloads/W19310-XLS-ENG.xlsx", sheet = "Twitter User Data")
+
+colnames(retweets_data)
+colnames(tweets_data)
+colnames(user_data)
+```
+
+
+```{r}
+# Checking total NA values in tweets_data
+total_na_tweets <- sum(is.na(tweets_data))
+# Doing the same for retweets_data
+total_na_retweets <- sum(is.na(retweets_data))
+# Doing the same for user_data
+total_na_user <- sum(is.na(user_data))
+# Getting the totals
+print(total_na_tweets)
+print(total_na_retweets)
+print(total_na_user)
+```
+After running initial exploratory analysis of the dataset, I have noticed that the dataset has many NA values ( as seen in the R screenshot below) that would either need handling or dropping. This was noticed in the tweets dataframe as well as the user data and only the retweets dataset appeared to have no NA values in both Vertex 1 and Vertex 2 columns so I chose to focus the SNA on this dataset only for the following reasons:
+
+•	It has complete data and the analysis will be simplified as there would be no need to keep checking missing values
+•	To match the purpose of this assignment, I would say that retweets unlike tweets that are original content, show how content is shared and spread and it can be a useful metric to analyze the reach and a measure of user engagement
+•	When identifying user clusters, it will be relevant to analyze the users often being retweeted using this retweets dataset  because they can be considered influencers. 
+
+
+```{r}
+#initial visualization of the network keeping retweets only
+retweets_data <- retweets_data %>%
+  filter(!is.na(`Vertex 1`) & !is.na(`Vertex 2`))
+retweets_data <- retweets_data %>%
+  mutate(`Vertex 1` = as.character(`Vertex 1`), `Vertex 2` = as.character(`Vertex 2`))
+network_graph <- graph_from_data_frame(d = retweets_data, directed = TRUE)
+plot(network_graph, layout = layout_with_fr(network_graph))
+```
+The graph above has been the initial visualization made to get a sense of the number of clusters if any and to identify if there are outliers.
+
+
+```{r}
+library(visNetwork)
+
+visIgraph(network_graph)
+
+V(network_graph)$name
+
+
+visIgraph(network_graph) %>%
+  visNodes(title = V(network_graph)$name) %>%  
+  visEdges(arrows = "to") %>% 
+  visInteraction(navigationButtons = TRUE, keyboard = TRUE)
+```
+The next visualization I made was this one above that shows the links through the connections lines and the central node ( when zooming in, the names of users are also visible)
+
+```{r}
+visIgraph(network_graph) %>%
+  visOptions(highlightNearest = TRUE, nodesIdSelection = TRUE) %>% 
+  visInteraction(navigationButtons = TRUE, keyboard = TRUE)
+```
+The next visualization I made was this one above that shows the links through the connections lines and the central node ( when zooming in, the names of users are also visible)
+
+```{r}
+visIgraph(network_graph) %>%
+  visSave("network_visualization.html")
+browseURL
+```
+
+I used cluster_walktrap method to identify communities in my network but it was messy and hard to navigate so I create a dynamic graph as you can see below  and saved it to a Url linked below as well :
+```{r}
+library(htmlwidgets)
+
+communities <- cluster_walktrap(network_graph)
+
+# Using the Walktrap communities method, now we plot the graph to identify clusters
+plot(communities, network_graph)
+
+nodes_df <- data.frame(id = V(network_graph)$name, 
+                       group = membership(communities),
+                       title = V(network_graph)$name,
+                       label = V(network_graph)$name)
+
+edges_df <- as_data_frame(network_graph, what = "edges")
+nodes_df$group <- as.factor(membership(communities))
+```
+As you can see in the script, in the final lines I disabled the dynamic and moving effect of the graph and built a new clear static one that would serve for final analysis :
+```{r}
+visNetwork(nodes_df, edges_df) %>%
+  visNodes(title = "title", label = "label", group = "group") %>%
+  visEdges(arrows = 'to') %>%
+  visOptions(highlightNearest = TRUE, nodesIdSelection = TRUE) %>%
+  visLayout(randomSeed = 123)
+```
+
+
+```{r}
+visNetwork(nodes_df, edges_df) %>%
+  visEdges(arrows = 'to') %>%
+  visPhysics(enabled = FALSE)
+```
+
+
+```{r}
+degree_centrality <- degree(network_graph, mode="all")  # Total connections
+in_degree <- degree(network_graph, mode="in")  # Incoming connections
+out_degree <- degree(network_graph, mode="out")  # Outgoing connections
+betweenness_centrality <- betweenness(network_graph, directed=TRUE)
+closeness_centrality <- closeness(network_graph, mode="all")
+```
+
+
+```{r}
+metrics <- list(
+  DegreeCentrality = list(In = in_degree, Out = out_degree),
+  BetweennessCentrality = betweenness_centrality,
+  ClosenessCentrality = closeness_centrality
+)
+print(metrics)
+```
+
+
+```{r}
+# network density
+network_density <- edge_density(network_graph)
+print(network_density)
+```
+The density of 0.06241647 means that about 6.24% of all possible connections are actually realized ==> moderate connectivity : while there is some interaction among users, the network is not highly interconnected. Many potential connections among nodes are not being utilized.
+
+```{r}
+#average_path_length
+average_path_length <- average.path.length(network_graph, directed = TRUE, unconnected = TRUE)
+print(average_path_length)
+```
+An average path length of 1.896 is quite low, suggesting that any given node (user) is, on average, less than two steps away from another node. This indicates a highly efficient network structure where information can travel very rapidly across the network. It means that any user can potentially reach any other user through approximately one intermediary, on average.
+
+Also: This value supports the small-world phenomenon often observed in social networks, where despite the large size of the network, the path length between nodes remains surprisingly short. 
+
+---
+Analysis:
+---
+Given the big number of users, I will speak in general terms ( or rather in terms of general patterns I noticed):
+
+•	There are large nodes that show high degree of centrality ; in simple terms, they have more connections than others in terms of replies to tweets/retweets …
+
+•	By looking at the size of the nodes, we can know the user’s importance in the network or their influence. These are the ones that spread information.
+
+•	We can see that there a dense cluster of connected users at the center of the plot so we can say that these users interact very often.
+
+•	The difference in colors tells us about the different communities that exist in our network, the central node has blue color whereas the outliers for example have a different one ( yellow, purple…) so this means there are different interactions or different topics discussed ( the topics around which they interact and are connected)
+
+•	There is a node on the extreme right that has no connection to the central cluster so this is definitely a separate community with different interests and we can also consider them non or less influential or maybe they’re new twitter users.
+
+---
+Xoxoday’s Social Media Strategy recommendations 
+---
+•	The separate communities should be further researched because they have different interests or topics around which they are separately connected away from central nodes, knowing this topic can help increase the reach because this would be a new segment in the audience.
+
+•	Leverage Influencer Marketing : The users found around the central node are the ones with high influence and they can be used as the brand’s platform for future marketing campaigns because they can use their reach to spread Xoxoday’s marketing messages quickly
+Even the outliers can be considered influencers actually because the users with the most connections within these separate communities can spread information with their own secluded group.
+
+```{r}
+#Thank you for reviewing my work and your feedback is highly appreciated
+```
