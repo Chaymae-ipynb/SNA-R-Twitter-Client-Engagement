@@ -5789,14 +5789,13 @@ noticed in the tweets dataframe as well as the user data and only the
 retweets dataset appeared to have no NA values in both Vertex 1 and
 Vertex 2 columns so I chose to focus the SNA on this dataset only for
 the following reasons:</p>
-<p>• It has complete data and the analysis will be simplified as there
-would be no need to keep checking missing values • To match the purpose
+<p>• To match the purpose
 of this assignment, I would say that retweets unlike tweets that are
 original content, show how content is shared and spread and it can be a
-useful metric to analyze the reach and a measure of user engagement •
+useful metric to analyze the reach as a measure of user engagement •
 When identifying user clusters, it will be relevant to analyze the users
 often being retweeted using this retweets dataset because they can be
-considered influencers.</p>
+considered "influencers".</p>
 <pre class="r"><code>#initial visualization of the network keeping retweets only
 retweets_data &lt;- retweets_data %&gt;%
   filter(!is.na(`Vertex 1`) &amp; !is.na(`Vertex 2`))
