@@ -4,9 +4,9 @@ library(tidyr)
 library(readxl)
 library(igraph)
 
-tweets_data <- read_excel("C:/Users/chouc/Downloads/W19310-XLS-ENG.xlsx", sheet = "Tweets Data")
-retweets_data <- read_excel("C:/Users/chouc/Downloads/W19310-XLS-ENG.xlsx", sheet = "Retweets Data")
-user_data <- read_excel("C:/Users/chouc/Downloads/W19310-XLS-ENG.xlsx", sheet = "Twitter User Data")
+tweets_data <- read_excel("C:/Users/ci/Downloads/W19310-XLS-ENG.xlsx", sheet = "Tweets Data")
+retweets_data <- read_excel("C:/Users/ci/Downloads/W19310-XLS-ENG.xlsx", sheet = "Retweets Data")
+user_data <- read_excel("C:/Users/ci/Downloads/W19310-XLS-ENG.xlsx", sheet = "Twitter User Data")
 
 colnames(retweets_data)
 colnames(tweets_data)
